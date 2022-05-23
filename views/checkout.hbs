@@ -14,19 +14,80 @@
     </div>
     <div class="card box-shadow mt-40">
       <div class="card-body">
-        <form name="payment-form">
-          <div>
-            <label for="email">Email address</label>
-            <input type="email" class="form-control" id="email" name="email" placeholder="you@email.com">
+        <form id="payment-form">
+          <div id="payment-element">
+            <!-- Elements will create form elements here -->
           </div>
-          <div class="mt-20 text-center text-secondary border-placeholder">
-            Add Stripe Element here!
-          </div>
-          <div class="mt-20">
-            <button type="submit" class="btn btn-lg btn-block btn-primary">Pay $<span class="amount" data-amount="{{amount}}"></span></button>
+          <button id="submit" type="submit" class="btn btn-lg btn-block btn-primary">Pay $<span class="amount" data-amount="{{amount}}"></span></button>
+          <div id="error-message">
+            <!-- Display error message to your customers here -->
           </div>
         </form>
       </div>
     </div>
   </div>
 </div>
+ <script>
+    document.addEventListener("DOMContentLoaded", async() => {
+      //Endpoint can be adeed to fetch this
+    const publishableKey = await fetch("/publishable-key").then(result => result.json())
+
+    const stripe = Stripe('pk_test_51L0vuSBaqV8NGaouYUSl6xKGJUtfGbF8aSbWxGPodmLVkDTfnvF8UFjIF4oARf8sSMxNGt7AUo7aFYh0ORGDtTCa00dO1NEiGv');
+
+    var purchase = {
+        items: [{ amount : {{amount}} }]
+    };
+
+    const {clientSecret } = await fetch("/create-payment-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(purchase)
+      }).then(
+      (r) => r.json()
+    );
+
+    //console.log(clientSecret.toString());
+
+    const options = {
+      clientSecret: clientSecret.toString(),
+      // Fully customizable with appearance API.
+    };
+
+    //console.log(options);
+
+    const elements = stripe.elements(options);
+    // Create and mount the Payment Element
+    const paymentElement = elements.create('payment');
+
+    paymentElement.mount('#payment-element');
+    const form = document.getElementById('payment-form');
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        console.log("hit submit");
+
+        const {error} = await stripe.confirmPayment({
+          //`Elements` instance that was used to create the Payment Element
+          elements,
+          confirmParams: {
+            return_url: 'http://localhost:3000/success',
+          },
+        });
+
+        if (error) {
+          // This point will only be reached if there is an immediate error when
+          // confirming the payment. Show error to your customer (for example, payment
+          // details incomplete)
+          const messageContainer = document.querySelector('#error-message');
+          messageContainer.textContent = error.message;
+        } else {
+          // Your customer will be redirected to your `return_url`. For some payment
+          // methods like iDEAL, your customer will be redirected to an intermediate
+          // site first to authorize the payment, then redirected to the `return_url`.
+        }
+      });
+
+    })
+</script>

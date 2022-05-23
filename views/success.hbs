@@ -1,13 +1,58 @@
 <main>
-  <div class="mt-40 text-center text-success">
+  <div class="mt-40 text-center text-status">
     <h1>
       <i class="far fa-check-circle"></i> 
-      Success!
+      Payment Status
     </h1>
   </div>
-  <div class="mt-40 text-center">
+  <div id= "message" class="mt-40 text-center">
     <div class="mt-20 text-center text-secondary border-placeholder">
-      Add details about the payment here!
+       <!-- Payment status will be printed herer -->
     </div>
   </div>
+  <div id="amount" class="mt-20 text-center text-secondary border-placeholder"> 
+       <!-- Amount will be printed herer -->
+  </div>
 </main>
+<script>
+  const stripe = Stripe('pk_test_51L0vuSBaqV8NGaouYUSl6xKGJUtfGbF8aSbWxGPodmLVkDTfnvF8UFjIF4oARf8sSMxNGt7AUo7aFYh0ORGDtTCa00dO1NEiGv');
+
+  const clientSecret = new URLSearchParams(window.location.search).get(
+  'payment_intent_client_secret'
+  );
+
+  // Retrieve the PaymentIntent
+  stripe.retrievePaymentIntent(clientSecret).then(({paymentIntent}) => {
+    const message = document.querySelector('#message')
+    const amount = document.querySelector('#amount')
+
+    // Inspect the PaymentIntent `status` to indicate the status of the payment
+    // to your customer.
+    //
+    // Some payment methods will [immediately succeed or fail][0] upon
+    // confirmation, while others will first enter a `processing` state.
+    //
+    // [0]: https://stripe.com/docs/payments/payment-methods#payment-notification
+    switch (paymentIntent.status) {
+      case 'succeeded':
+        message.innerText = `Success! Payment received.! \n Payment ID: ${paymentIntent.id}`;
+        var amount_usd = (paymentIntent.amount/100).toLocaleString("en-US", {style:"currency", currency:"USD"});
+        amount.innerText = `Total Amount:  ${amount_usd}`;
+        break;
+
+      case 'processing':
+        message.innerText = "Payment processing. We'll update you when payment is received.";
+        break;
+
+      case 'requires_payment_method':
+        message.innerText = 'Payment failed. Please try another payment method.';
+        // Redirect your user back to your payment page to attempt collecting
+        // payment again
+        break;
+
+      default:
+        message.innerText = 'Something went wrong.';
+        break;
+    }
+  });
+</script>
